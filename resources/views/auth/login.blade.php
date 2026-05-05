@@ -48,7 +48,7 @@
             </div>
 
             <h1 class="text-3xl font-extrabold mb-3 bg-clip-text text-transparent bg-gradient-to-r from-indigo-900 to-purple-800">Demo SSO Client</h1>
-            <p class="text-slate-500 mb-10 text-sm leading-relaxed">Experience a seamless and secure authentication gateway powered by SSO FASILKOM UNSRI.</p>
+            <p class="text-slate-500 mb-10 text-sm leading-relaxed">Masuk dengan aman dan mudah menggunakan kredensial institusi Anda melalui SSO FASILKOM UNSRI.</p>
 
             @if($errors->any())
                 <div class="w-full bg-red-50/80 backdrop-blur-md text-red-600 text-sm p-4 rounded-xl mb-8 border border-red-200 shadow-sm flex items-start text-left">
@@ -60,7 +60,7 @@
             <a href="{{ route('sso.redirect') }}" class="group w-full relative inline-flex items-center justify-center px-8 py-4 text-sm font-bold text-white transition-all duration-300 bg-slate-900 rounded-xl hover:bg-slate-800 hover:shadow-xl hover:shadow-slate-900/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-900 overflow-hidden">
                 <span class="absolute inset-0 w-full h-full -mt-1 rounded-lg opacity-30 bg-gradient-to-b from-transparent via-transparent to-black"></span>
                 <span class="relative flex items-center">
-                    Proceed to Login
+                    Login dengan SSO FASILKOM UNSRI
                     <svg class="w-5 h-5 ml-3 transition-transform duration-300 group-hover:translate-x-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
                 </span>
             </a>
