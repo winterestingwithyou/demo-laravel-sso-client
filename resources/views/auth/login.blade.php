@@ -31,7 +31,7 @@
         .animation-delay-4000 { animation-delay: 4s; }
     </style>
 </head>
-<body class="min-h-screen bg-slate-50 flex items-center justify-center relative overflow-hidden text-slate-900">
+<body class="min-h-screen bg-slate-50 flex items-center justify-center relative text-slate-900">
 
     <!-- Decorative Blobs -->
     <div class="blob bg-purple-300 w-96 h-96 rounded-full top-0 left-10 animate-blob"></div>

@@ -77,7 +77,7 @@
             </a>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
             
             <!-- Identity Widget -->
             <div class="bg-white rounded-3xl premium-shadow border border-slate-100 overflow-hidden flex flex-col relative">
@@ -124,7 +124,7 @@
                     </div>
                     <div class="text-slate-500 text-xs font-mono bg-white/5 px-2 py-1 rounded">Disimpan lokal</div>
                 </div>
-                <div class="p-6 overflow-x-auto h-full">
+                <div class="p-6 overflow-auto max-h-[700px] scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
                     <pre class="text-sm font-mono text-emerald-400 leading-relaxed selection:bg-emerald-400/30"><code>{!! htmlspecialchars(json_encode(request()->ssoUser->profilemetadata, JSON_PRETTY_PRINT)) !!}</code></pre>
                 </div>
             </div>

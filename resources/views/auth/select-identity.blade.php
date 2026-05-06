@@ -21,7 +21,7 @@
         }
     </style>
 </head>
-<body class="min-h-screen bg-pattern flex items-center justify-center relative overflow-hidden text-slate-900 py-12 px-4">
+<body class="min-h-screen bg-pattern flex items-center justify-center relative text-slate-900 py-12 px-4">
 
     <div class="relative z-10 w-full max-w-2xl">
         <div class="glass-panel rounded-3xl shadow-[0_20px_40px_-15px_rgba(0,0,0,0.1)] p-10">
