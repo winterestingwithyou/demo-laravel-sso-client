@@ -31,7 +31,7 @@ class SsoAuthController extends Controller
             'client_id' => env('SSO_CLIENT_ID'),
             'redirect_uri' => env('SSO_REDIRECT_URI'),
             'response_type' => 'code',
-            'scope' => '',
+            'scope' => 'OPENID PROFILE EMAIL',
             'state' => $state,
             'code_challenge' => $code_challenge,
             'code_challenge_method' => 'S256',
