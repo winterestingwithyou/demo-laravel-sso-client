@@ -42,11 +42,19 @@ class SsoAuthController extends Controller
 
     public function callback(Request $request)
     {
+        if ($request->has('error')) {
+            return redirect()->route('login')->withErrors(['error' => 'SSO Redirect Error: ' . $request->error . ' (' . $request->error_description . ')']);
+        }
+
+        if (!$request->code) {
+            return redirect()->route('login')->withErrors(['error' => 'Authorization code is missing from the SSO redirect.']);
+        }
+
         $state = $request->session()->pull('state');
         $code_verifier = $request->session()->pull('code_verifier');
 
-        if (strlen($state) > 0 && $state !== $request->state) {
-            return redirect()->route('login')->withErrors(['error' => 'Invalid state.']);
+        if (!$state || $state !== $request->state) {
+            return redirect()->route('login')->withErrors(['error' => 'Invalid state or session expired.']);
         }
 
         $response = Http::asForm()->post(env('SSO_BASE_URL') . '/oauth/token', [
