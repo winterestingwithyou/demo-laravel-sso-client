@@ -43,7 +43,10 @@ class SsoAuthController extends Controller
     public function callback(Request $request)
     {
         if ($request->has('error')) {
-            return redirect()->route('login')->withErrors(['error' => 'SSO Redirect Error: ' . $request->error . ' (' . $request->error_description . ')']);
+            if ($request->error === 'access_denied') {
+                return redirect()->route('login')->withErrors(['error' => 'Otentikasi dibatalkan. Anda harus menyetujui permintaan izin akses untuk dapat masuk ke aplikasi ini.']);
+            }
+            return redirect()->route('login')->withErrors(['error' => 'Terjadi kesalahan SSO: ' . $request->error . ' (' . $request->error_description . ')']);
         }
 
         if (!$request->code) {
