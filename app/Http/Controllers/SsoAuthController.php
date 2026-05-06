@@ -78,7 +78,7 @@ class SsoAuthController extends Controller
         $refreshToken = $tokenData['refresh_token'] ?? null;
 
         // Ambil profil lengkap dari endpoint Profile
-        $profileResponse = Http::withToken($accessToken)->get(env('SSO_PROFILE_URL'));
+        $profileResponse = Http::withToken($accessToken)->get(env('SSO_BASE_URL') . '/profile');
         
         if ($profileResponse->failed()) {
             return redirect()->route('login')->withErrors(['error' => 'Gagal mengambil profil pengguna dari SSO: ' . $profileResponse->body()]);
