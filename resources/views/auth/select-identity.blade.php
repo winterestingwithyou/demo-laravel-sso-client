@@ -48,8 +48,10 @@
                 <div class="space-y-4 mb-10">
                     @foreach($identities as $index => $identity)
                         @php
-                            $idVal = is_array($identity) ? ($identity['id'] ?? $identity['role'] ?? json_encode($identity)) : $identity;
-                            $labelVal = is_array($identity) ? ($identity['name'] ?? $identity['role'] ?? json_encode($identity)) : $identity;
+                            $type = $identity['type'];
+                            $idVal = $type;
+                            $labelVal = $type;
+                            $desc = "Gunakan sistem sebagai " . $type;
                         @endphp
                         <label class="relative flex cursor-pointer rounded-2xl border bg-white p-5 shadow-sm focus:outline-none 
                                     hover:border-indigo-200 hover:bg-indigo-50/30 transition-all has-[:checked]:border-indigo-500 
@@ -58,7 +60,7 @@
                             <span class="flex flex-1">
                                 <span class="flex flex-col">
                                     <span class="block text-sm font-bold text-slate-900 uppercase tracking-wide">{{ $labelVal }}</span>
-                                    <span class="mt-1 flex items-center text-sm text-slate-500">Gunakan sistem sebagai {{ $labelVal }}</span>
+                                    <span class="mt-1 flex items-center text-sm text-slate-500">{{ $desc }}</span>
                                 </span>
                             </span>
                             <svg class="h-6 w-6 text-indigo-600 opacity-0 transition-opacity peer-checked:opacity-100 absolute right-5 top-1/2 -translate-y-1/2" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">

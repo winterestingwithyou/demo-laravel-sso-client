@@ -77,23 +77,42 @@ class SsoAuthController extends Controller
         $accessToken = $tokenData['access_token'];
         $refreshToken = $tokenData['refresh_token'] ?? null;
 
-        // Decode JWT payload (tanpa validasi signature, karena didapat via request server-to-server TLS)
-        $payload = explode('.', $accessToken)[1];
-        $user = json_decode(base64_decode($payload), true);
+        // Ambil profil lengkap dari endpoint Profile
+        $profileResponse = Http::withToken($accessToken)->get(env('SSO_PROFILE_URL'));
         
-        $identities = $user['identities'] ?? [];
+        if ($profileResponse->failed()) {
+            return redirect()->route('login')->withErrors(['error' => 'Gagal mengambil profil pengguna dari SSO: ' . $profileResponse->body()]);
+        }
 
-        if (count($identities) > 1) {
+        $profileData = $profileResponse->json()['data'] ?? null;
+        if (!$profileData) {
+            return redirect()->route('login')->withErrors(['error' => 'Data profil SSO kosong atau tidak valid.']);
+        }
+
+        // Filter identitas yang aktif (tidak null)
+        $rawIdentities = $profileData['identities'] ?? [];
+        $activeIdentities = [];
+        foreach ($rawIdentities as $key => $value) {
+            if ($value !== null) {
+                $activeIdentities[] = [
+                    'type' => strtoupper($key),
+                    'data' => $value
+                ];
+            }
+        }
+
+        if (count($activeIdentities) > 1) {
             // Jika identity > 1, simpan ke sesi sementara dan redirect ke select-identity
-            Session::put('sso_temp_user', $user);
+            Session::put('sso_temp_user', $profileData);
+            Session::put('sso_temp_identities', $activeIdentities);
             Session::put('sso_temp_access_token', $accessToken);
             Session::put('sso_temp_refresh_token', $refreshToken);
             
             return redirect()->route('sso.select_identity_view');
         }
 
-        $authUserId = $user['sub'] ?? ($user['id'] ?? null);
-        $activeIdentity = count($identities) === 1 ? ($identities[0]['id'] ?? $identities[0]) : ($user['active_identity'] ?? null);
+        $authUserId = $profileData['authUserId'] ?? ($profileData['id'] ?? null);
+        $selectedIdentity = count($activeIdentities) === 1 ? $activeIdentities[0]['type'] : null;
 
         $existing = DB::table('auth_sessions')->where('auth_user_id', $authUserId)->first();
         $authSessionId = $existing ? $existing->id : (string) Str::uuid();
@@ -102,15 +121,15 @@ class SsoAuthController extends Controller
             ['auth_user_id' => $authUserId],
             [
                 'id' => $authSessionId,
-                'email' => $user['email'] ?? '',
-                'name' => $user['name'] ?? null,
-                'active_identity' => $activeIdentity,
-                'roles' => json_encode($user['roles'] ?? []),
-                'permissions' => json_encode($user['permissions'] ?? []),
-                'identities_cache' => json_encode($identities),
+                'email' => $profileData['emails'][0]['email'] ?? ($profileData['email'] ?? ''),
+                'name' => $profileData['fullName'] ?? ($profileData['name'] ?? null),
+                'active_identity' => $selectedIdentity,
+                'roles' => json_encode($profileData['roles'] ?? []),
+                'permissions' => json_encode($profileData['permissions'] ?? []),
+                'identities_cache' => json_encode($rawIdentities),
                 'access_token' => $accessToken,
                 'refresh_token' => $refreshToken,
-                'profilemetadata' => json_encode($user),
+                'profilemetadata' => json_encode($profileData),
                 'updated_at' => now(),
                 'created_at' => $existing ? $existing->created_at : now(),
             ]
@@ -123,12 +142,11 @@ class SsoAuthController extends Controller
 
     public function selectIdentityView()
     {
-        if (!Session::has('sso_temp_user')) {
+        if (!Session::has('sso_temp_identities')) {
             return redirect()->route('login');
         }
         
-        $user = Session::get('sso_temp_user');
-        $identities = $user['identities'] ?? [];
+        $identities = Session::get('sso_temp_identities');
         
         return view('auth.select-identity', compact('identities'));
     }
@@ -141,10 +159,10 @@ class SsoAuthController extends Controller
             return redirect()->route('login');
         }
 
-        $user = Session::get('sso_temp_user');
+        $profileData = Session::get('sso_temp_user');
         $accessToken = Session::get('sso_temp_access_token');
         $refreshToken = Session::get('sso_temp_refresh_token');
-        $authUserId = $user['sub'] ?? ($user['id'] ?? null);
+        $authUserId = $profileData['authUserId'] ?? ($profileData['id'] ?? null);
         
         $existing = DB::table('auth_sessions')->where('auth_user_id', $authUserId)->first();
         $authSessionId = $existing ? $existing->id : (string) Str::uuid();
@@ -153,21 +171,21 @@ class SsoAuthController extends Controller
             ['auth_user_id' => $authUserId],
             [
                 'id' => $authSessionId,
-                'email' => $user['email'] ?? '',
-                'name' => $user['name'] ?? null,
+                'email' => $profileData['emails'][0]['email'] ?? ($profileData['email'] ?? ''),
+                'name' => $profileData['fullName'] ?? ($profileData['name'] ?? null),
                 'active_identity' => $request->identity,
-                'roles' => json_encode($user['roles'] ?? []),
-                'permissions' => json_encode($user['permissions'] ?? []),
-                'identities_cache' => json_encode($user['identities'] ?? []),
+                'roles' => json_encode($profileData['roles'] ?? []),
+                'permissions' => json_encode($profileData['permissions'] ?? []),
+                'identities_cache' => json_encode($profileData['identities'] ?? []),
                 'access_token' => $accessToken,
                 'refresh_token' => $refreshToken,
-                'profilemetadata' => json_encode($user),
+                'profilemetadata' => json_encode($profileData),
                 'updated_at' => now(),
                 'created_at' => $existing ? $existing->created_at : now(),
             ]
         );
 
-        Session::forget(['sso_temp_user', 'sso_temp_access_token', 'sso_temp_refresh_token']);
+        Session::forget(['sso_temp_user', 'sso_temp_identities', 'sso_temp_access_token', 'sso_temp_refresh_token']);
         Session::put('auth_user_id', $authUserId);
 
         return redirect()->route('dashboard');
