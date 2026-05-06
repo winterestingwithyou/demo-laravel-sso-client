@@ -72,36 +72,100 @@ class SsoAuthController extends Controller
 
         $tokenData = $response->json();
         $accessToken = $tokenData['access_token'];
+        $refreshToken = $tokenData['refresh_token'] ?? null;
 
-        $profileResponse = Http::withToken($accessToken)->get(env('SSO_BASE_URL') . '/api/auth/me');
+        // Decode JWT payload (tanpa validasi signature, karena didapat via request server-to-server TLS)
+        $payload = explode('.', $accessToken)[1];
+        $user = json_decode(base64_decode($payload), true);
+        
+        $identities = $user['identities'] ?? [];
 
-        if ($profileResponse->failed()) {
-            return redirect()->route('login')->withErrors(['error' => 'Failed to obtain user profile: ' . $profileResponse->body()]);
+        if (count($identities) > 1) {
+            // Jika identity > 1, simpan ke sesi sementara dan redirect ke select-identity
+            Session::put('sso_temp_user', $user);
+            Session::put('sso_temp_access_token', $accessToken);
+            Session::put('sso_temp_refresh_token', $refreshToken);
+            
+            return redirect()->route('sso.select_identity_view');
         }
 
-        $userData = $profileResponse->json();
-        $user = $userData['data'] ?? $userData;
+        $authUserId = $user['sub'] ?? ($user['id'] ?? null);
+        $activeIdentity = count($identities) === 1 ? ($identities[0]['id'] ?? $identities[0]) : ($user['active_identity'] ?? null);
 
-        $existing = DB::table('auth_sessions')->where('auth_user_id', $user['id'])->first();
+        $existing = DB::table('auth_sessions')->where('auth_user_id', $authUserId)->first();
         $authSessionId = $existing ? $existing->id : (string) Str::uuid();
 
         DB::table('auth_sessions')->updateOrInsert(
-            ['auth_user_id' => $user['id']],
+            ['auth_user_id' => $authUserId],
             [
                 'id' => $authSessionId,
-                'email' => $user['email'],
+                'email' => $user['email'] ?? '',
                 'name' => $user['name'] ?? null,
-                'active_identity' => $user['active_identity'] ?? null,
+                'active_identity' => $activeIdentity,
                 'roles' => json_encode($user['roles'] ?? []),
                 'permissions' => json_encode($user['permissions'] ?? []),
+                'identities_cache' => json_encode($identities),
                 'access_token' => $accessToken,
-                'profilemetadata' => json_encode($user), // Tambahan data profil agar tidak hit API terus
+                'refresh_token' => $refreshToken,
+                'profilemetadata' => json_encode($user),
                 'updated_at' => now(),
                 'created_at' => $existing ? $existing->created_at : now(),
             ]
         );
 
-        Session::put('auth_user_id', $user['id']);
+        Session::put('auth_user_id', $authUserId);
+
+        return redirect()->route('dashboard');
+    }
+
+    public function selectIdentityView()
+    {
+        if (!Session::has('sso_temp_user')) {
+            return redirect()->route('login');
+        }
+        
+        $user = Session::get('sso_temp_user');
+        $identities = $user['identities'] ?? [];
+        
+        return view('auth.select-identity', compact('identities'));
+    }
+
+    public function selectIdentitySubmit(Request $request)
+    {
+        $request->validate(['identity' => 'required']);
+        
+        if (!Session::has('sso_temp_user')) {
+            return redirect()->route('login');
+        }
+
+        $user = Session::get('sso_temp_user');
+        $accessToken = Session::get('sso_temp_access_token');
+        $refreshToken = Session::get('sso_temp_refresh_token');
+        $authUserId = $user['sub'] ?? ($user['id'] ?? null);
+        
+        $existing = DB::table('auth_sessions')->where('auth_user_id', $authUserId)->first();
+        $authSessionId = $existing ? $existing->id : (string) Str::uuid();
+
+        DB::table('auth_sessions')->updateOrInsert(
+            ['auth_user_id' => $authUserId],
+            [
+                'id' => $authSessionId,
+                'email' => $user['email'] ?? '',
+                'name' => $user['name'] ?? null,
+                'active_identity' => $request->identity,
+                'roles' => json_encode($user['roles'] ?? []),
+                'permissions' => json_encode($user['permissions'] ?? []),
+                'identities_cache' => json_encode($user['identities'] ?? []),
+                'access_token' => $accessToken,
+                'refresh_token' => $refreshToken,
+                'profilemetadata' => json_encode($user),
+                'updated_at' => now(),
+                'created_at' => $existing ? $existing->created_at : now(),
+            ]
+        );
+
+        Session::forget(['sso_temp_user', 'sso_temp_access_token', 'sso_temp_refresh_token']);
+        Session::put('auth_user_id', $authUserId);
 
         return redirect()->route('dashboard');
     }
@@ -110,10 +174,45 @@ class SsoAuthController extends Controller
     {
         $authUserId = Session::get('auth_user_id');
         if ($authUserId) {
+            $session = DB::table('auth_sessions')->where('auth_user_id', $authUserId)->first();
+            
+            if ($session && $session->access_token) {
+                // Revoke token di sisi SSO
+                Http::asForm()->post(env('SSO_BASE_URL') . '/oauth/revoke', [
+                    'token' => $session->access_token,
+                    'client_id' => env('SSO_CLIENT_ID'),
+                    'client_secret' => env('SSO_CLIENT_SECRET'),
+                ]);
+            }
+            
             DB::table('auth_sessions')->where('auth_user_id', $authUserId)->delete();
         }
         
         Session::flush();
         return redirect()->route('login');
+    }
+
+    public function me(Request $request)
+    {
+        $authUserId = Session::get('auth_user_id');
+        if (!$authUserId) {
+            return response()->json(['error' => 'Unauthenticated'], 401);
+        }
+
+        $session = DB::table('auth_sessions')->where('auth_user_id', $authUserId)->first();
+        if (!$session) {
+            return response()->json(['error' => 'Unauthenticated'], 401);
+        }
+
+        return response()->json([
+            'id' => $session->auth_user_id,
+            'email' => $session->email,
+            'name' => $session->name,
+            'active_identity' => $session->active_identity,
+            'roles' => json_decode($session->roles),
+            'permissions' => json_decode($session->permissions),
+            'identities' => json_decode($session->identities_cache),
+            'profile' => json_decode($session->profilemetadata),
+        ]);
     }
 }

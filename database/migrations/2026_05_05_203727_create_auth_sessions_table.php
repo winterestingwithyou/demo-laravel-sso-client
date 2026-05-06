@@ -19,7 +19,9 @@ return new class extends Migration
             $table->string('active_identity')->nullable(); // cth: DOSEN / MAHASISWA
             $table->json('roles')->nullable();
             $table->json('permissions')->nullable();
+            $table->json('identities_cache')->nullable();
             $table->text('access_token');
+            $table->text('refresh_token')->nullable();
             $table->json('profilemetadata')->nullable(); // Tambahan data profil agar tidak hit API terus
             $table->timestamps();
         });
