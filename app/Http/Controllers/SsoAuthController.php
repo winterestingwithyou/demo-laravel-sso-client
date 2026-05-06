@@ -59,7 +59,7 @@ class SsoAuthController extends Controller
         ]);
 
         if ($response->failed()) {
-            return redirect()->route('login')->withErrors(['error' => 'Failed to obtain access token.']);
+            return redirect()->route('login')->withErrors(['error' => 'Failed to obtain access token: ' . $response->body()]);
         }
 
         $tokenData = $response->json();
@@ -68,7 +68,7 @@ class SsoAuthController extends Controller
         $profileResponse = Http::withToken($accessToken)->get(env('SSO_BASE_URL') . '/api/auth/me');
 
         if ($profileResponse->failed()) {
-            return redirect()->route('login')->withErrors(['error' => 'Failed to obtain user profile.']);
+            return redirect()->route('login')->withErrors(['error' => 'Failed to obtain user profile: ' . $profileResponse->body()]);
         }
 
         $userData = $profileResponse->json();
