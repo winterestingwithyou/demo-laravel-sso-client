@@ -50,7 +50,7 @@ class SsoAuthController extends Controller
         }
 
         $response = Http::asForm()->post(env('SSO_BASE_URL') . '/oauth/token', [
-            'grant_type' => 'authorization_code',
+            'grant_type' => 'AUTHORIZATION_CODE',
             'client_id' => env('SSO_CLIENT_ID'),
             'client_secret' => env('SSO_CLIENT_SECRET'),
             'redirect_uri' => env('SSO_REDIRECT_URI'),
