@@ -36,7 +36,7 @@ Tidak seperti aplikasi Laravel pada umumnya, aplikasi ini **TIDAK memiliki fitur
 ## 🛠️ Teknologi yang Digunakan
 
 Aplikasi ini dirancang seminimalis dan semodern mungkin:
-- **Framework**: [Laravel 11](https://laravel.com/)
+- **Framework**: [Laravel 13](https://laravel.com/)
 - **Frontend Styling**: [Tailwind CSS v4](https://tailwindcss.com/)
 - **Bundler**: [Vite](https://vitejs.dev/)
 - **Database**: PostgreSQL / SQLite (Untuk tabel *sessions*)
